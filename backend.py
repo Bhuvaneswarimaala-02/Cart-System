@@ -1,117 +1,70 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-import groq
-import os
-import re
-import pymongo
-from dotenv import load_dotenv
-from bson.objectid import ObjectId
-from pymongo import MongoClient
+# ✅ API Endpoint for Cart Assistant Chatbot
+# @app.route('/process_chat', methods=['POST'])
+# def chat():
+#     data = request.json
+#     user_message = data.get("message", "").strip().lower()
+#     user_id = "user123"  # Replace with actual user ID
 
-# Load environment variables
-load_dotenv()
-api_key = os.getenv("GROQ_API_KEY")
+#     # Recognizing different commands
+#     if re.search(r"\bshow\s+(my\s+)?cart\b", user_message):
+#         response = show_cart(user_id)
+#     elif re.search(r"\brecommend\s+(me\s+)?(some\s+)?items?\b", user_message):
+#         recommended_items = recommend_products(user_id)
+#         response = "🌟 You might also like: " + ", ".join(recommended_items)
+#     elif re.search(r"\badd\s+(\d+)?\s*([\w\s]+)\s+to\s+my\s+cart\b", user_message):
+#         match = re.search(r"\badd\s+(\d+)?\s*([\w\s]+)\s+to\s+my\s+cart\b", user_message)
+#         quantity = int(match.group(1)) if match.group(1) else 1
+#         item_name = match.group(2).strip()
+#         response = add_to_cart(user_id, item_name, quantity)
+#     elif re.search(r"\bremove\s+([\w\s]+)\s+from\s+my\s+cart\b", user_message):
+#         match = re.search(r"\bremove\s+([\w\s]+)\s+from\s+my\s+cart\b", user_message)
+#         item_name = match.group(1).strip()
+#         response = remove_from_cart(user_id, item_name)
+#     elif re.search(r"\bupdate\s+([\w\s]+)\s+to\s+(\d+)\s*(kg|pcs)?\b", user_message):
+#         match = re.search(r"\bupdate\s+([\w\s]+)\s+to\s+(\d+)\s*(kg|pcs)?\b", user_message)
+#         item_name = match.group(1).strip()
+#         new_quantity = int(match.group(2))
+#         response = update_cart_item(user_id, item_name, new_quantity)
 
-# Initialize Groq client
-client = groq.Client(api_key=api_key)
+#     # ✅ Extra Functionality: Fetch Cart Items
+#     elif re.search(r"\b(list|what's|what are)\s+(in\s+)?(my\s+)?cart\b", user_message):
+#         cart_items = get_cart_items(user_id)
+#         if cart_items:
+#             response = "**🛍️ Items in Your Cart:**\n"
+#             response += "\n".join([f"🔹 {item['quantity']} x {item['item_name']}" for item in cart_items])
+#         else:
+#             response = "🛒 Your cart is currently empty."
 
-# MongoDB Setup
-mongo_client = MongoClient("mongodb://localhost:27017/")
-db = mongo_client["farm2bag"]
-products_collection = db["products"]
-cart_collection = db["cart"]
+#     # ✅ Extra Functionality: Check Item Prices
+#     elif re.search(r"\b(price of|cost of|how much is)\s+([\w\s]+)\b", user_message):
+#         match = re.search(r"\b(price of|cost of|how much is)\s+([\w\s]+)\b", user_message)
+#         item_name = match.group(2).strip()
+#         price = get_price(item_name)
+#         if price:
+#             response = f"💰 The price of {item_name} is ₹{price} per unit."
+#         else:
+#             response = f"❌ Sorry, {item_name} is not available in our inventory."
 
-# Flask App
-app = Flask(__name__)
-CORS(app)  # Enable CORS for frontend-backend communication
+#     # ✅ Extra Functionality: Check Product Category
+#     elif re.search(r"\b(category of|what type is|which category does)\s+([\w\s]+)\b", user_message):
+#         match = re.search(r"\b(category of|what type is|which category does)\s+([\w\s]+)\b", user_message)
+#         item_name = match.group(2).strip()
+#         category = get_product_category(item_name)
+#         if category:
+#             response = f"📦 {item_name} belongs to the '{category}' category."
+#         else:
+#             response = f"❌ Sorry, I couldn't find the category for {item_name}."
 
-# ✅ Root Route
-@app.route("/")
-def home():
-    return "Farm2Bag Chatbot Backend is running!"
+#     # ✅ Extra Functionality: Recommend Based on Cart
+#     elif re.search(r"\b(suggest|recommend|show me)\s+(some\s+)?(similar|complementary)?\s*products?\b", user_message):
+#         cart_items = get_cart_items(user_id)
+#         if cart_items:
+#             recommendations = recommend_products(user_id)
+#             response = "🌟 Based on your cart, you might like:\n" + "\n".join(recommendations)
+#         else:
+#             response = "🛒 Your cart is empty. Add items to get recommendations!"
 
-# ✅ Function to Add Items to Cart
-def add_to_cart(user_id, item_name, quantity):
-    """Adds an item to the cart or updates the quantity if it already exists."""
-    existing_item = cart_collection.find_one({"user_id": user_id, "item_name": item_name})
+#     else:
+#         response = f"How can I help?"
 
-    if existing_item:
-        cart_collection.update_one(
-            {"user_id": user_id, "item_name": item_name},
-            {"$inc": {"quantity": quantity}}
-        )
-        return f"✅ Updated {item_name} quantity in your cart."
-    else:
-        cart_item = {
-            "user_id": user_id,
-            "item_name": item_name,
-            "quantity": quantity
-        }
-        cart_collection.insert_one(cart_item)
-        return f"🛒 Added {item_name} to your cart."
-
-# ✅ Function to get product category
-def get_product_category(product_name):
-    product = products_collection.find_one({"name": product_name})
-    return product.get("category", "") if product else ""
-
-# ✅ Function to recommend products based on cart items
-def recommend_products(user_id):
-    user_cart_items = list(cart_collection.find({"user_id": user_id}))
-    cart_product_names = [item["item_name"] for item in user_cart_items]
-    all_products = list(products_collection.find({}))
-    
-    recommended_items = []
-    for product in all_products:
-        if product["name"] in cart_product_names:
-            continue
-        
-        for cart_item in cart_product_names:
-            if is_similar_or_complementary(product["name"], cart_item):
-                recommended_items.append(product["name"])
-                break
-    
-    return recommended_items[:5] if recommended_items else ["Organic Rice", "Cold-Pressed Oil"]
-
-# ✅ Function to determine similar or complementary products
-def is_similar_or_complementary(product_name, cart_item):
-    product_category = get_product_category(product_name)
-    cart_item_category = get_product_category(cart_item)
-    
-    if product_category == cart_item_category:
-        return True
-    
-    if cart_item.lower() in ["oranges", "apples"] and "juice" in product_name.lower():
-        return True
-    
-    return False
-
-# ✅ Endpoint to handle chatbot messages
-@app.route("/chat", methods=["POST"])
-def chat():
-    data = request.json
-    user_id = data.get("user_id", "user123")  # Replace with actual user authentication logic
-    message = data.get("message", "")
-
-    # Handle adding items to cart
-    add_to_cart_pattern = re.compile(r"add\s+(\d+)?\s*([a-zA-Z\s]+)\s+to\s+my\s+cart", re.IGNORECASE)
-    match = add_to_cart_pattern.search(message)
-
-    if match:
-        quantity = int(match.group(1)) if match.group(1) else 1
-        item_name = match.group(2).strip()
-        response = add_to_cart(user_id, item_name, quantity)
-        return jsonify({"response": response})
-
-    # Handle other queries (e.g., product recommendations)
-    recommended_items = recommend_products(user_id)
-    if recommended_items:
-        response = "🌟 You might also like:\n" + "\n".join(recommended_items)
-    else:
-        response = "How can I assist you further?"
-
-    return jsonify({"response": response})
-
-# Run the Flask app
-if __name__ == "__main__":
-    app.run(port=5000)
+#     return jsonify({"response": response})
