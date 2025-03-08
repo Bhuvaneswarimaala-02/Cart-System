@@ -8,10 +8,10 @@ app = Flask(__name__)
 CORS(app)  # Enable cross-origin access for frontend requests
 
 # ✅ Fixed website for scraping (REPLACE WITH YOUR WEBSITE)
-FIXED_WEBSITE_URL = "https://www.farm2bag.com/en"
+FIXED_WEBSITE_URL = "website.com"
 
 # ✅ OpenAI API Key (REPLACE WITH YOUR KEY)
-openai.api_key = "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"
+openai.api_key = "API_KEY"
 
 # ✅ Function to Scrape Website Content
 def scrape_website():

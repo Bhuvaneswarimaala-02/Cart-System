@@ -28,7 +28,7 @@ api_key = os.getenv("GROQ_API_KEY")
 
 # Initialize Groq client
 client = groq.Client(api_key=api_key)
-os.environ["TOGETHER_API_KEY"] = 'c97530aceaffcb28eecbaefd032551e2075fd3d323aea71f598cad92122c7d69'
+os.environ["TOGETHER_API_KEY"] = 'API_KEY'
 store = {}
 
 # MongoDB Setup
@@ -377,5 +377,3 @@ def get_session_history(session_id: str) -> BaseChatMessageHistory:
     return store[session_id]
 
 
-# token hf
-# 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
