@@ -48,9 +48,6 @@ An intelligent, AI-integrated e-commerce assistant that can:
 - **FAISS vectorstore** enables semantic search.
 - If user’s intent is unknown, triggers RAG-based document Q&A.
 
-### 🌐 Web Scraping
-- Scrapes content dynamically from [farm2bag.com](https://www.farm2bag.com/en) using `BeautifulSoup`.
-
 ### 🎙️ Voice Support
 - Accepts voice input using `webkitSpeechRecognition`.
 - Uses `speechSynthesis` to read chatbot responses aloud.
